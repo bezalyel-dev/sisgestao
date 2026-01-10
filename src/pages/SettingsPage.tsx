@@ -24,7 +24,7 @@ type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 export function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

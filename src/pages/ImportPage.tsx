@@ -93,14 +93,14 @@ export function ImportPage() {
 
       const { data: importData, error: importError } = await createImport(importRecord);
 
-      if (importError || !importData) {
+      if (importError || !importData || !importData.id) {
         console.error('Erro ao criar registro de importação:', importError);
         const errorMessage = importError instanceof Error 
           ? importError.message 
           : typeof importError === 'object' && importError !== null && 'message' in importError
           ? String((importError as any).message)
-          : 'Erro desconhecido ao criar registro de importação';
-        throw new Error(`Erro ao criar registro de importação: ${errorMessage}`);
+          : 'Erro ao criar registro de importação. O registro não foi criado corretamente.';
+        throw new Error(errorMessage);
       }
 
       // Atualiza transações com import_id

@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import type { Import } from '../types';
 import type { Database } from '../types/database';
 
+type ImportUpdate = Database['public']['Tables']['imports']['Update'];
+
 type ImportInsert = Database['public']['Tables']['imports']['Insert'];
 type ImportRow = Database['public']['Tables']['imports']['Row'];
 
@@ -91,7 +93,7 @@ export async function createImport(importData: Import): Promise<{ data: Import |
     
     const { data, error } = await supabase
       .from('imports')
-      .insert(insertData)
+      .insert(insertData as ImportInsert)
       .select()
       .single();
 
@@ -142,7 +144,7 @@ export async function updateImport(
   updates: Partial<Import>
 ): Promise<{ data: Import | null; error: Error | null }> {
   try {
-    const updateData: any = {};
+    const updateData: ImportUpdate = {};
     
     if (updates.status) updateData.status = updates.status;
     if (updates.rows_imported !== undefined) updateData.rows_imported = updates.rows_imported;

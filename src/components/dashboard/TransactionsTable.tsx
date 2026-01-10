@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Transaction } from '../../types';
 import { formatBrazilianDate, formatTime } from '../../utils/dateUtils';
 import { formatBrazilianCurrency } from '../../utils/currencyUtils';
