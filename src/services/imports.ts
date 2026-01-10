@@ -2,8 +2,6 @@ import { supabase } from './supabase';
 import type { Import } from '../types';
 import type { Database } from '../types/database';
 
-type ImportUpdate = Database['public']['Tables']['imports']['Update'];
-
 type ImportInsert = Database['public']['Tables']['imports']['Insert'];
 type ImportRow = Database['public']['Tables']['imports']['Row'];
 
@@ -91,9 +89,10 @@ export async function createImport(importData: Import): Promise<{ data: Import |
     console.log('User ID autenticado:', user.id);
     console.log('User email:', user.email);
     
-    const { data, error } = await supabase
-      .from('imports')
-      .insert(insertData as ImportInsert)
+    // Usa type assertion para contornar problema de inferência de tipos do Supabase
+    const { data, error } = await (supabase
+      .from('imports') as any)
+      .insert(insertData)
       .select()
       .single();
 
@@ -144,13 +143,17 @@ export async function updateImport(
   updates: Partial<Import>
 ): Promise<{ data: Import | null; error: Error | null }> {
   try {
-    const updateData: ImportUpdate = {};
+    const updateData: {
+      status?: 'success' | 'error' | 'partial';
+      rows_imported?: number;
+    } = {};
     
     if (updates.status) updateData.status = updates.status;
     if (updates.rows_imported !== undefined) updateData.rows_imported = updates.rows_imported;
 
-    const { data, error } = await supabase
-      .from('imports')
+    // Usa type assertion para contornar problema de inferência de tipos do Supabase
+    const { data, error } = await (supabase
+      .from('imports') as any)
       .update(updateData)
       .eq('id', id)
       .select()

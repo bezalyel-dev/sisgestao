@@ -4,7 +4,6 @@ import type { Database } from '../types/database';
 
 type TransactionInsert = Database['public']['Tables']['transactions']['Insert'];
 type TransactionRow = Database['public']['Tables']['transactions']['Row'];
-type TransactionUpdate = Database['public']['Tables']['transactions']['Update'];
 
 /**
  * Converte Transaction para formato de insert do Supabase
@@ -105,9 +104,10 @@ function rowToTransaction(row: TransactionRow): Transaction {
 export async function insertTransaction(transaction: Transaction): Promise<{ data: Transaction | null; error: Error | null }> {
   try {
     const insertData = transactionToInsert(transaction);
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert(insertData as TransactionInsert)
+    // Usa type assertion para contornar problema de inferência de tipos do Supabase
+    const { data, error } = await (supabase
+      .from('transactions') as any)
+      .insert(insertData)
       .select()
       .single();
 
@@ -143,9 +143,10 @@ export async function insertTransactions(
     const insertData = batch.map(transactionToInsert);
 
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(insertData as TransactionInsert[])
+      // Usa type assertion para contornar problema de inferência de tipos do Supabase
+      const { data, error } = await (supabase
+        .from('transactions') as any)
+        .insert(insertData)
         .select();
 
       if (error) {
