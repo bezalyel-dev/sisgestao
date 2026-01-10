@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileUpload } from '../components/import/FileUpload';
 import { CSVPreview } from '../components/import/CSVPreview';
 import { ImportHistory } from '../components/import/ImportHistory';
@@ -6,6 +6,7 @@ import { processCSV } from '../utils/csvParser';
 import { insertTransactions } from '../services/transactions';
 import { createImport, updateImport } from '../services/imports';
 import { useAuth } from '../hooks/useAuth';
+import { useImport } from '../contexts/ImportContext';
 import type { Transaction, Import } from '../types';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -17,7 +18,7 @@ export function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { user } = useAuth();
-  const isImportingRef = useRef(false);
+  const { setIsImporting } = useImport();
 
   const handleFileSelect = useCallback(async (file: File | null) => {
     setSelectedFile(file);
@@ -82,7 +83,7 @@ export function ImportPage() {
     setProgress(0);
     setError(null);
     setSuccess(null);
-    isImportingRef.current = true;
+    setIsImporting(true);
 
     try {
       // Cria registro de importação
@@ -139,12 +140,12 @@ export function ImportPage() {
     } finally {
       setLoading(false);
       setProgress(0);
-      isImportingRef.current = false;
+      setIsImporting(false);
     }
-  }, [selectedFile, transactions, user]);
+  }, [selectedFile, transactions, user, setIsImporting]);
 
   const handleCancel = useCallback(() => {
-    if (isImportingRef.current) {
+    if (loading) {
       const confirmCancel = window.confirm(
         'Uma importação está em andamento. Se você cancelar agora, a importação será interrompida e os dados não serão salvos. Deseja realmente cancelar?'
       );
@@ -152,7 +153,7 @@ export function ImportPage() {
         return;
       }
       // Cancela a importação (não há como cancelar async operations, mas marca como não importando)
-      isImportingRef.current = false;
+      setIsImporting(false);
       setLoading(false);
       setProgress(0);
     }
@@ -160,25 +161,14 @@ export function ImportPage() {
     setTransactions([]);
     setError(null);
     setSuccess(null);
-  }, []);
+  }, [loading, setIsImporting]);
 
-  // Adiciona listener para beforeunload (sair/atualizar página)
+  // Limpa o estado de importação quando o componente desmonta
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isImportingRef.current) {
-        e.preventDefault();
-        // Mensagem padrão (não pode ser customizada em navegadores modernos)
-        e.returnValue = '';
-        return '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      setIsImporting(false);
     };
-  }, []);
+  }, [setIsImporting]);
 
   return (
     <div className="space-y-6">

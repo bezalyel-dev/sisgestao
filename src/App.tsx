@@ -8,6 +8,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { useAuth } from './hooks/useAuth';
+import { ImportProvider } from './contexts/ImportContext';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -78,7 +79,9 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <ImportProvider>
+        <AppRoutes />
+      </ImportProvider>
     </BrowserRouter>
   );
 }

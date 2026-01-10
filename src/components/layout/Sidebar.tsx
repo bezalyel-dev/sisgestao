@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Upload, FileText, LogOut, Settings, X, Menu } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useImport } from '../../contexts/ImportContext';
 import { useState } from 'react';
+import { Modal } from '../common/Modal';
 
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -14,16 +16,56 @@ export function Sidebar() {
   const location = useLocation();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { isImporting } = useImport();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNavigationModal, setShowNavigationModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const handleSignOut = async () => {
+    if (isImporting) {
+      setPendingNavigation('/logout'); // Usa um valor especial para logout
+      setShowNavigationModal(true);
+      return;
+    }
+    await performSignOut();
+  };
+
+  const performSignOut = async () => {
     await signOut();
     navigate('/login');
     setIsMobileMenuOpen(false);
   };
 
-  const handleLinkClick = () => {
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    // Se está na mesma página, apenas fecha o menu mobile
+    if (location.pathname === path) {
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
+    // Se há importação em andamento, mostra modal
+    if (isImporting) {
+      e.preventDefault();
+      setPendingNavigation(path);
+      setShowNavigationModal(true);
+      return;
+    }
+
     setIsMobileMenuOpen(false);
+  };
+
+  const handleConfirmNavigation = async () => {
+    if (pendingNavigation === '/logout') {
+      await performSignOut();
+    } else if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setIsMobileMenuOpen(false);
+    }
+    setPendingNavigation(null);
+  };
+
+  const handleCancelNavigation = () => {
+    setPendingNavigation(null);
   };
 
   return (
@@ -78,7 +120,7 @@ export function Sidebar() {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    onClick={handleLinkClick}
+                    onClick={(e) => handleLinkClick(e, item.path)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                       isActive
                         ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-purple-500/50 scale-105 font-semibold'
@@ -105,6 +147,22 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Modal de Aviso de Navegação */}
+      <Modal
+        isOpen={showNavigationModal}
+        onClose={handleCancelNavigation}
+        onConfirm={handleConfirmNavigation}
+        title="⚠️ Importação em Andamento"
+        message={
+          pendingNavigation === '/logout'
+            ? `Uma importação está em andamento. Se você sair do sistema agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
+            : `Uma importação está em andamento. Se você sair desta página agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
+        }
+        confirmText="Sim, Continuar"
+        cancelText="Cancelar"
+        variant="warning"
+      />
     </>
   );
 }
