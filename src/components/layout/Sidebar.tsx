@@ -54,19 +54,6 @@ export function Sidebar() {
     setIsMobileMenuOpen(false);
   };
 
-  const handleConfirmNavigation = async () => {
-    if (pendingNavigation === '/logout') {
-      await performSignOut();
-    } else if (pendingNavigation) {
-      navigate(pendingNavigation);
-      setIsMobileMenuOpen(false);
-    }
-    setPendingNavigation(null);
-  };
-
-  const handleCancelNavigation = () => {
-    setPendingNavigation(null);
-  };
 
   return (
     <>
@@ -149,20 +136,34 @@ export function Sidebar() {
       </div>
 
       {/* Modal de Aviso de Navegação */}
-      <Modal
-        isOpen={showNavigationModal}
-        onClose={handleCancelNavigation}
-        onConfirm={handleConfirmNavigation}
-        title="⚠️ Importação em Andamento"
-        message={
-          pendingNavigation === '/logout'
-            ? `Uma importação está em andamento. Se você sair do sistema agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
-            : `Uma importação está em andamento. Se você sair desta página agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
-        }
-        confirmText="Sim, Continuar"
-        cancelText="Cancelar"
-        variant="warning"
-      />
+      {showNavigationModal && (
+        <Modal
+          isOpen={showNavigationModal}
+          onClose={() => {
+            setShowNavigationModal(false);
+            setPendingNavigation(null);
+          }}
+          onConfirm={async () => {
+            setShowNavigationModal(false);
+            if (pendingNavigation === '/logout') {
+              await performSignOut();
+            } else if (pendingNavigation) {
+              navigate(pendingNavigation);
+              setIsMobileMenuOpen(false);
+            }
+            setPendingNavigation(null);
+          }}
+          title="⚠️ Importação em Andamento"
+          message={
+            pendingNavigation === '/logout'
+              ? `Uma importação está em andamento. Se você sair do sistema agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
+              : `Uma importação está em andamento. Se você sair desta página agora, a importação será interrompida e os dados não serão salvos.\n\nDeseja realmente continuar e cancelar a importação?`
+          }
+          confirmText="Sim, Continuar"
+          cancelText="Cancelar"
+          variant="warning"
+        />
+      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FileUpload } from '../components/import/FileUpload';
 import { CSVPreview } from '../components/import/CSVPreview';
 import { ImportHistory } from '../components/import/ImportHistory';
@@ -18,7 +18,8 @@ export function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { user } = useAuth();
-  const { setIsImporting } = useImport();
+  const { isImporting, setIsImporting } = useImport();
+  const isImportingRef = useRef(false);
 
   const handleFileSelect = useCallback(async (file: File | null) => {
     setSelectedFile(file);
@@ -84,6 +85,7 @@ export function ImportPage() {
     setError(null);
     setSuccess(null);
     setIsImporting(true);
+    isImportingRef.current = true;
 
     try {
       // Cria registro de importação
@@ -141,6 +143,7 @@ export function ImportPage() {
       setLoading(false);
       setProgress(0);
       setIsImporting(false);
+      isImportingRef.current = false;
     }
   }, [selectedFile, transactions, user, setIsImporting]);
 
@@ -163,12 +166,24 @@ export function ImportPage() {
     setSuccess(null);
   }, [loading, setIsImporting]);
 
-  // Limpa o estado de importação quando o componente desmonta
+  // Adiciona listener para beforeunload (atualizar/fechar página)
   useEffect(() => {
-    return () => {
-      setIsImporting(false);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Usa tanto o estado quanto a ref para garantir que funciona
+      if (loading || isImporting || isImportingRef.current) {
+        e.preventDefault();
+        // Navegadores modernos mostram apenas uma mensagem padrão, mas ainda assim pedem confirmação
+        e.returnValue = '';
+        return '';
+      }
     };
-  }, [setIsImporting]);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [loading, isImporting]);
 
   return (
     <div className="space-y-6">

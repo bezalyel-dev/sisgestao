@@ -76,7 +76,10 @@ export function Modal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all duration-200 z-50 animate-fade-in">
+      <div 
+        className="relative bg-white rounded-lg shadow-xl max-w-md w-full transform transition-all duration-200 z-50 animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${styles.border}`}>
           <div className="flex items-center gap-3">
@@ -86,7 +89,12 @@ export function Modal({
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           </div>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
           >
             <X className="w-5 h-5" />
@@ -103,16 +111,23 @@ export function Modal({
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
           <button
-            onClick={onClose}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
           >
             {cancelText}
           </button>
           {onConfirm && (
             <button
-              onClick={() => {
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 onConfirm();
-                onClose();
               }}
               className={`px-4 py-2 rounded-lg transition font-medium ${styles.button}`}
             >
