@@ -160,6 +160,14 @@ export async function insertTransactions(
         .select();
 
       if (error) {
+        console.error(`Erro ao inserir lote ${currentBatch}/${totalBatches}:`, error);
+        console.error('Detalhes do erro:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
         // Se houver erro, tenta inserir uma por uma para identificar duplicatas
         for (const transaction of batch) {
           const result = await insertTransaction(transaction);
@@ -168,6 +176,7 @@ export async function insertTransactions(
               duplicates++;
             } else {
               errors++;
+              console.error('Erro ao inserir transação individual:', result.error);
             }
           } else if (result.data) {
             inserted++;
@@ -176,7 +185,9 @@ export async function insertTransactions(
           }
         }
       } else {
-        inserted += data?.length || 0;
+        const insertedCount = data?.length || 0;
+        inserted += insertedCount;
+        console.log(`Lote ${currentBatch}/${totalBatches} inserido com sucesso: ${insertedCount} transações`);
       }
       
       // Calcula e reporta progresso: 5% inicial + 90% para inserção + 5% para atualização final
@@ -187,6 +198,7 @@ export async function insertTransactions(
         onProgress(Math.min(insertionProgress, 95)); // Máximo 95% antes de atualizar o registro
       }
     } catch (error) {
+      console.error(`Erro inesperado ao inserir lote ${currentBatch}/${totalBatches}:`, error);
       errors += batch.length;
     }
   }

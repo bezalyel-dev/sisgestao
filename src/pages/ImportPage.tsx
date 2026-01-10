@@ -116,23 +116,61 @@ export function ImportPage() {
         import_id: importData.id,
       }));
 
+      console.log(`Iniciando inserção de ${transactionsWithImportId.length} transações...`);
+      
       // Insere transações com callback de progresso
       const result = await insertTransactions(transactionsWithImportId, (currentProgress) => {
         setProgress(currentProgress);
       });
 
-      // Atualiza registro de importação
-      await updateImport(importData.id, {
-        rows_imported: result.inserted,
-        status: result.errors > 0 ? (result.inserted > 0 ? 'partial' : 'error') : 'success',
+      console.log('Resultado da importação:', {
+        inserted: result.inserted,
+        errors: result.errors,
+        duplicates: result.duplicates,
+        total: transactionsWithImportId.length
       });
 
+      // Atualiza registro de importação
+      const updateResult = await updateImport(importData.id, {
+        rows_imported: result.inserted,
+        status: result.errors > 0 ? (result.inserted > 0 ? 'partial' : 'error') : result.inserted > 0 ? 'success' : 'error',
+      });
+
+      if (updateResult.error) {
+        console.error('Erro ao atualizar registro de importação:', updateResult.error);
+      } else {
+        console.log('Registro de importação atualizado:', updateResult.data);
+      }
+
       setProgress(100);
-      setSuccess(
-        `Importação concluída! ${result.inserted} transação(ões) inserida(s). ` +
-        `${result.duplicates} duplicata(s) ignorada(s). ` +
-        `${result.errors} erro(s).`
-      );
+      
+      // Verifica se realmente inseriu algo
+      if (result.inserted === 0 && result.errors === 0 && result.duplicates === transactionsWithImportId.length) {
+        // Todas eram duplicatas
+        setSuccess(
+          `Importação concluída, mas nenhuma nova transação foi inserida. ` +
+          `${result.duplicates} transação(ões) já existiam no banco (duplicatas ignoradas).`
+        );
+      } else if (result.inserted === 0 && result.errors === 0 && result.duplicates === 0) {
+        // Nenhuma foi inserida e não houve erros ou duplicatas - problema grave
+        setError(
+          `Erro ao importar transações: Nenhuma transação foi inserida, mas também não houve erros ou duplicatas reportados. ` +
+          `Isso pode indicar um problema com as permissões do banco de dados ou com os dados das transações. ` +
+          `Verifique o console do navegador (F12) para mais detalhes.`
+        );
+      } else if (result.inserted === 0 && result.errors > 0) {
+        // Erro na importação
+        setError(
+          `Erro ao importar transações: ${result.errors} erro(s) ocorreram. ` +
+          `Nenhuma transação foi inserida. Verifique o console do navegador (F12) para mais detalhes.`
+        );
+      } else {
+        setSuccess(
+          `Importação concluída! ${result.inserted} transação(ões) inserida(s). ` +
+          `${result.duplicates} duplicata(s) ignorada(s). ` +
+          `${result.errors} erro(s).`
+        );
+      }
 
       // Limpa estado
       setSelectedFile(null);
