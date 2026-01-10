@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { FileUpload } from '../components/import/FileUpload';
 import { CSVPreview } from '../components/import/CSVPreview';
 import { ImportHistory } from '../components/import/ImportHistory';
@@ -13,9 +13,11 @@ export function ImportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { user } = useAuth();
+  const isImportingRef = useRef(false);
 
   const handleFileSelect = useCallback(async (file: File | null) => {
     setSelectedFile(file);
@@ -77,8 +79,10 @@ export function ImportPage() {
     }
 
     setLoading(true);
+    setProgress(0);
     setError(null);
     setSuccess(null);
+    isImportingRef.current = true;
 
     try {
       // Cria registro de importação
@@ -109,8 +113,10 @@ export function ImportPage() {
         import_id: importData.id,
       }));
 
-      // Insere transações
-      const result = await insertTransactions(transactionsWithImportId);
+      // Insere transações com callback de progresso
+      const result = await insertTransactions(transactionsWithImportId, (currentProgress) => {
+        setProgress(currentProgress);
+      });
 
       // Atualiza registro de importação
       await updateImport(importData.id, {
@@ -118,6 +124,7 @@ export function ImportPage() {
         status: result.errors > 0 ? (result.inserted > 0 ? 'partial' : 'error') : 'success',
       });
 
+      setProgress(100);
       setSuccess(
         `Importação concluída! ${result.inserted} transação(ões) inserida(s). ` +
         `${result.duplicates} duplicata(s) ignorada(s). ` +
@@ -131,14 +138,46 @@ export function ImportPage() {
       setError(err instanceof Error ? err.message : 'Erro ao importar transações');
     } finally {
       setLoading(false);
+      setProgress(0);
+      isImportingRef.current = false;
     }
   }, [selectedFile, transactions, user]);
 
   const handleCancel = useCallback(() => {
+    if (isImportingRef.current) {
+      const confirmCancel = window.confirm(
+        'Uma importação está em andamento. Se você cancelar agora, a importação será interrompida e os dados não serão salvos. Deseja realmente cancelar?'
+      );
+      if (!confirmCancel) {
+        return;
+      }
+      // Cancela a importação (não há como cancelar async operations, mas marca como não importando)
+      isImportingRef.current = false;
+      setLoading(false);
+      setProgress(0);
+    }
     setSelectedFile(null);
     setTransactions([]);
     setError(null);
     setSuccess(null);
+  }, []);
+
+  // Adiciona listener para beforeunload (sair/atualizar página)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isImportingRef.current) {
+        e.preventDefault();
+        // Mensagem padrão (não pode ser customizada em navegadores modernos)
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   return (
@@ -181,12 +220,61 @@ export function ImportPage() {
       )}
 
       {transactions.length > 0 && (
-        <CSVPreview
-          transactions={transactions}
-          onConfirm={handleConfirmImport}
-          onCancel={handleCancel}
-          loading={loading}
-        />
+        <>
+          <CSVPreview
+            transactions={transactions}
+            onConfirm={handleConfirmImport}
+            onCancel={handleCancel}
+            loading={loading}
+          />
+          
+          {/* Barra de Progresso */}
+          {loading && (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-lg shadow-lg p-6 animate-pulse">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                  <h3 className="text-lg font-semibold text-gray-900">Importando transações...</h3>
+                </div>
+                <span className="text-lg font-bold text-indigo-600">{Math.round(progress)}%</span>
+              </div>
+              
+              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner mb-4 relative">
+                <div
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 h-full rounded-full transition-all duration-500 ease-out flex items-center justify-end pr-2 relative z-10"
+                  style={{ width: `${Math.max(progress, 5)}%` }}
+                >
+                  {progress > 15 && (
+                    <span className="text-xs font-bold text-white drop-shadow">
+                      {Math.round(progress)}%
+                    </span>
+                  )}
+                </div>
+                {/* Animação de brilho */}
+                {progress > 0 && progress < 100 && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer pointer-events-none z-20"></div>
+                )}
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-yellow-800 mb-1">
+                    ⚠️ Atenção: Importação em andamento
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    Por favor, <strong>não saia desta página</strong> e <strong>não atualize</strong>. 
+                    Se você sair ou atualizar agora, a importação será <strong>interrompida</strong> e os dados não serão salvos.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-4 text-xs text-gray-500 text-center">
+                Processando {transactions.length} transação(ões)... {Math.min(Math.round(progress * transactions.length / 100), transactions.length)} de {transactions.length} concluída(s)
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <ImportHistory />

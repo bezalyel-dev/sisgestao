@@ -127,9 +127,12 @@ export async function insertTransaction(transaction: Transaction): Promise<{ dat
 
 /**
  * Insere múltiplas transações em lote
+ * @param transactions Array de transações para inserir
+ * @param onProgress Callback opcional para reportar progresso (0-100)
  */
 export async function insertTransactions(
-  transactions: Transaction[]
+  transactions: Transaction[],
+  onProgress?: (progress: number) => void
 ): Promise<{ inserted: number; errors: number; duplicates: number }> {
   let inserted = 0;
   let errors = 0;
@@ -137,10 +140,17 @@ export async function insertTransactions(
 
   // Processa em lotes de 100 para evitar problemas de performance
   const batchSize = 100;
+  const totalBatches = Math.ceil(transactions.length / batchSize);
+  
+  // Notifica progresso inicial (criando registro de importação)
+  if (onProgress) {
+    onProgress(5); // 5% para criação do registro
+  }
   
   for (let i = 0; i < transactions.length; i += batchSize) {
     const batch = transactions.slice(i, i + batchSize);
     const insertData = batch.map(transactionToInsert);
+    const currentBatch = Math.floor(i / batchSize) + 1;
 
     try {
       // Usa type assertion para contornar problema de inferência de tipos do Supabase
@@ -168,9 +178,22 @@ export async function insertTransactions(
       } else {
         inserted += data?.length || 0;
       }
+      
+      // Calcula e reporta progresso: 5% inicial + 90% para inserção + 5% para atualização final
+      // Progresso base: 5% (criação do registro)
+      // Progresso da inserção: 5% + (currentBatch / totalBatches) * 90
+      const insertionProgress = 5 + (currentBatch / totalBatches) * 90;
+      if (onProgress) {
+        onProgress(Math.min(insertionProgress, 95)); // Máximo 95% antes de atualizar o registro
+      }
     } catch (error) {
       errors += batch.length;
     }
+  }
+
+  // Notifica progresso final
+  if (onProgress) {
+    onProgress(100);
   }
 
   return { inserted, errors, duplicates };
