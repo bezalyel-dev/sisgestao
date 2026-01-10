@@ -22,7 +22,8 @@ export function Sidebar() {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const handleSignOut = async () => {
-    if (isImporting) {
+    // Só mostra modal se há importação em andamento E estamos na página de importação
+    if (isImporting && location.pathname === '/import') {
       setPendingNavigation('/logout'); // Usa um valor especial para logout
       setShowNavigationModal(true);
       return;
@@ -43,8 +44,9 @@ export function Sidebar() {
       return;
     }
 
-    // Se há importação em andamento, mostra modal
-    if (isImporting) {
+    // Se há importação em andamento E estamos na página de importação, mostra modal
+    // Só mostra o modal se realmente houver uma importação ativa
+    if (isImporting && location.pathname === '/import') {
       e.preventDefault();
       setPendingNavigation(path);
       setShowNavigationModal(true);

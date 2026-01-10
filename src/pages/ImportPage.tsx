@@ -185,6 +185,28 @@ export function ImportPage() {
     };
   }, [loading, isImporting]);
 
+  // Limpa o estado de importação quando o componente desmonta (usuário sai da página)
+  useEffect(() => {
+    return () => {
+      // Sempre limpa quando o componente desmonta
+      setIsImporting(false);
+      isImportingRef.current = false;
+    };
+  }, [setIsImporting]);
+
+  // Garante que o estado seja limpo quando não há mais loading (importação finalizada)
+  useEffect(() => {
+    if (!loading && isImporting) {
+      // Pequeno delay para garantir que a finalização foi processada
+      const timer = setTimeout(() => {
+        setIsImporting(false);
+        isImportingRef.current = false;
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isImporting, setIsImporting]);
+
   return (
     <div className="space-y-6">
       <div>
