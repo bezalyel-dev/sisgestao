@@ -43,3 +43,42 @@ code {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+/* Estilos para inputs de hora - melhorar visibilidade dos controles */
+input[type="time"] {
+  color: #111827 !important;
+  background-color: #f9fafb !important;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5) !important;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(0.3) !important;
+}
+
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-outer-spin-button {
+  opacity: 1 !important;
+  filter: invert(0.4) !important;
+}
+
+input[type="time"]:focus {
+  background-color: #ffffff !important;
+  border-color: #6366f1 !important;
+}
+
+/* Para Firefox */
+input[type="time"]::-moz-calendar-picker-indicator {
+  filter: invert(0.5) !important;
+  opacity: 0.7;
+}
+
+input[type="time"]::-moz-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(0.3) !important;
+}

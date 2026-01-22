@@ -117,7 +117,7 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Hora Início</label>
               <div className="relative">
-                <Clock className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 lg:w-4 lg:h-4 text-gray-400" />
+                <Clock className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 lg:w-4 lg:h-4 text-gray-400 z-10" />
                 <input
                   type="time"
                   value={localFilters.horaInicio || ''}
@@ -126,14 +126,19 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
                     setLocalFilters(newFilters);
                     onFiltersChange(newFilters);
                   }}
-                  className="w-full pl-8 lg:pl-10 pr-2 lg:pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="w-full pl-8 lg:pl-10 pr-4 lg:pr-6 py-2.5 lg:py-3 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 font-medium text-gray-900"
+                  style={{ 
+                    minWidth: '120px', 
+                    letterSpacing: '0.025em',
+                    colorScheme: 'light'
+                  }}
                 />
               </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Hora Fim</label>
               <div className="relative">
-                <Clock className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 lg:w-4 lg:h-4 text-gray-400" />
+                <Clock className="absolute left-2 lg:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 lg:w-4 lg:h-4 text-gray-400 z-10" />
                 <input
                   type="time"
                   value={localFilters.horaFim || ''}
@@ -142,7 +147,12 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
                     setLocalFilters(newFilters);
                     onFiltersChange(newFilters);
                   }}
-                  className="w-full pl-8 lg:pl-10 pr-2 lg:pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="w-full pl-8 lg:pl-10 pr-4 lg:pr-6 py-2.5 lg:py-3 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 font-medium text-gray-900"
+                  style={{ 
+                    minWidth: '120px', 
+                    letterSpacing: '0.025em',
+                    colorScheme: 'light'
+                  }}
                 />
               </div>
             </div>
