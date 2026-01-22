@@ -225,36 +225,95 @@ export async function getTransactions(
       .select('*', { count: 'exact' });
 
     // Aplica filtros de data e hora
-    if (filters?.dataInicio) {
-      const startDate = new Date(filters.dataInicio);
+    console.log('🔍 Filtros recebidos:', {
+      dataInicio: filters?.dataInicio,
+      horaInicio: filters?.horaInicio,
+      dataFim: filters?.dataFim,
+      horaFim: filters?.horaFim
+    });
+
+    // Aplica filtro de data/hora início
+    if (filters?.dataInicio || filters?.horaInicio) {
+      let startDate: Date;
+      
+      if (filters.dataInicio) {
+        // Cria a data no timezone local para evitar problemas de timezone
+        const dateStr = filters.dataInicio instanceof Date 
+          ? filters.dataInicio.toISOString().split('T')[0]
+          : filters.dataInicio.toString().split('T')[0];
+        const [year, month, day] = dateStr.split('-').map(Number);
+        startDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+      } else {
+        // Se não há data mas há hora, usa data mínima (1970) para filtrar apenas por hora
+        startDate = new Date(0);
+      }
+      
       // Se houver hora de início, aplica ela; senão, começa do início do dia
       if (filters.horaInicio) {
         const [hours, minutes] = filters.horaInicio.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
           startDate.setHours(hours, minutes, 0, 0);
+          const dateStr = filters.dataInicio 
+            ? (filters.dataInicio instanceof Date ? filters.dataInicio.toISOString().split('T')[0] : filters.dataInicio.toString().split('T')[0])
+            : 'sem data';
+          console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
         } else {
-          startDate.setHours(0, 0, 0, 0);
+          if (filters.dataInicio) {
+            startDate.setHours(0, 0, 0, 0);
+          }
+          console.log('⚠️ Hora inválida');
         }
       } else {
-        startDate.setHours(0, 0, 0, 0);
+        if (filters.dataInicio) {
+          startDate.setHours(0, 0, 0, 0);
+        }
       }
-      query = query.gte('data_transacao', startDate.toISOString());
+      
+      if (filters.dataInicio || (filters.horaInicio && !isNaN(Number(filters.horaInicio.split(':')[0])))) {
+        query = query.gte('data_transacao', startDate.toISOString());
+      }
     }
 
-    if (filters?.dataFim) {
-      const endDate = new Date(filters.dataFim);
+    // Aplica filtro de data/hora fim
+    if (filters?.dataFim || filters?.horaFim) {
+      let endDate: Date;
+      
+      if (filters.dataFim) {
+        // Cria a data no timezone local para evitar problemas de timezone
+        const dateStr = filters.dataFim instanceof Date 
+          ? filters.dataFim.toISOString().split('T')[0]
+          : filters.dataFim.toString().split('T')[0];
+        const [year, month, day] = dateStr.split('-').map(Number);
+        endDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+      } else {
+        // Se não há data mas há hora, usa data máxima para filtrar apenas por hora
+        endDate = new Date('2099-12-31');
+      }
+      
       // Se houver hora de fim, aplica ela; senão, termina no fim do dia
       if (filters.horaFim) {
         const [hours, minutes] = filters.horaFim.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
           endDate.setHours(hours, minutes, 59, 999);
+          const dateStr = filters.dataFim 
+            ? (filters.dataFim instanceof Date ? filters.dataFim.toISOString().split('T')[0] : filters.dataFim.toString().split('T')[0])
+            : 'sem data';
+          console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
         } else {
-          endDate.setHours(23, 59, 59, 999);
+          if (filters.dataFim) {
+            endDate.setHours(23, 59, 59, 999);
+          }
+          console.log('⚠️ Hora inválida');
         }
       } else {
-        endDate.setHours(23, 59, 59, 999);
+        if (filters.dataFim) {
+          endDate.setHours(23, 59, 59, 999);
+        }
       }
-      query = query.lte('data_transacao', endDate.toISOString());
+      
+      if (filters.dataFim || (filters.horaFim && !isNaN(Number(filters.horaFim.split(':')[0])))) {
+        query = query.lte('data_transacao', endDate.toISOString());
+      }
     }
 
     if (filters?.adquirentes && filters.adquirentes.length > 0) {
@@ -321,10 +380,14 @@ export async function getAllTransactions(
       .from('transactions')
       .select('*');
 
-    // Aplica filtros de data e hora
+    // Aplica filtros de data e hora (mesma lógica de getTransactions)
     if (filters?.dataInicio) {
-      const startDate = new Date(filters.dataInicio);
-      // Se houver hora de início, aplica ela; senão, começa do início do dia
+      const dateStr = filters.dataInicio instanceof Date 
+        ? filters.dataInicio.toISOString().split('T')[0]
+        : filters.dataInicio.toString().split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day);
+      
       if (filters.horaInicio) {
         const [hours, minutes] = filters.horaInicio.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
@@ -339,8 +402,12 @@ export async function getAllTransactions(
     }
 
     if (filters?.dataFim) {
-      const endDate = new Date(filters.dataFim);
-      // Se houver hora de fim, aplica ela; senão, termina no fim do dia
+      const dateStr = filters.dataFim instanceof Date 
+        ? filters.dataFim.toISOString().split('T')[0]
+        : filters.dataFim.toString().split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day);
+      
       if (filters.horaFim) {
         const [hours, minutes] = filters.horaFim.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
@@ -388,13 +455,21 @@ export async function getTransactionSummary(
       .from('transactions')
       .select('valor_bruto, valor_liquido', { count: 'exact' });
 
-    // Aplica os mesmos filtros de data e hora
+    // Aplica os mesmos filtros de data e hora (mesma lógica de getTransactions)
     if (filters?.dataInicio) {
-      const startDate = new Date(filters.dataInicio);
-      // Se houver hora de início, aplica ela; senão, começa do início do dia
+      const dateStr = filters.dataInicio instanceof Date 
+        ? filters.dataInicio.toISOString().split('T')[0]
+        : filters.dataInicio.toString().split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day);
+      
       if (filters.horaInicio) {
         const [hours, minutes] = filters.horaInicio.split(':').map(Number);
-        startDate.setHours(hours, minutes, 0, 0);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          startDate.setHours(hours, minutes, 0, 0);
+        } else {
+          startDate.setHours(0, 0, 0, 0);
+        }
       } else {
         startDate.setHours(0, 0, 0, 0);
       }
@@ -402,11 +477,19 @@ export async function getTransactionSummary(
     }
 
     if (filters?.dataFim) {
-      const endDate = new Date(filters.dataFim);
-      // Se houver hora de fim, aplica ela; senão, termina no fim do dia
+      const dateStr = filters.dataFim instanceof Date 
+        ? filters.dataFim.toISOString().split('T')[0]
+        : filters.dataFim.toString().split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day);
+      
       if (filters.horaFim) {
         const [hours, minutes] = filters.horaFim.split(':').map(Number);
-        endDate.setHours(hours, minutes, 59, 999);
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          endDate.setHours(hours, minutes, 59, 999);
+        } else {
+          endDate.setHours(23, 59, 59, 999);
+        }
       } else {
         endDate.setHours(23, 59, 59, 999);
       }
