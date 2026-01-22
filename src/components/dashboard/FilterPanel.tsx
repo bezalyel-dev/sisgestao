@@ -157,6 +157,11 @@ export function FilterPanel({ filters, onFiltersChange }: FilterPanelProps) {
               </div>
             </div>
           </div>
+          {(localFilters.horaInicio || localFilters.horaFim) && !localFilters.dataInicio && !localFilters.dataFim && (
+            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+              ⚠️ Para filtrar por horário, é necessário selecionar uma data também.
+            </div>
+          )}
         </div>
 
         {/* Filtro de Adquirente */}

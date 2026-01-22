@@ -34,7 +34,10 @@ export function TransactionsTable({
     return (
       <div className="bg-white rounded-lg shadow-md lg:shadow-lg flex items-center justify-center min-h-[300px] lg:min-h-[400px] p-8">
         <div className="text-center text-gray-500">
-          <p className="text-sm lg:text-base">Nenhuma transação encontrada</p>
+          <p className="text-sm lg:text-base font-medium mb-2">Nenhuma transação encontrada</p>
+          <p className="text-xs lg:text-sm text-gray-400">
+            Não há vendas para os filtros selecionados. Tente ajustar os filtros de data, hora, adquirente ou modalidade.
+          </p>
         </div>
       </div>
     );

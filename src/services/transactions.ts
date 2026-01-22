@@ -233,87 +233,61 @@ export async function getTransactions(
     });
 
     // Aplica filtro de data/hora início
-    if (filters?.dataInicio || filters?.horaInicio) {
-      let startDate: Date;
-      
-      if (filters.dataInicio) {
-        // Cria a data no timezone local para evitar problemas de timezone
-        const dateStr = filters.dataInicio instanceof Date 
-          ? filters.dataInicio.toISOString().split('T')[0]
-          : String(filters.dataInicio).split('T')[0];
-        const [year, month, day] = dateStr.split('-').map(Number);
-        startDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
-      } else {
-        // Se não há data mas há hora, usa data mínima (1970) para filtrar apenas por hora
-        startDate = new Date(0);
-      }
+    // IMPORTANTE: Hora só funciona se houver data selecionada
+    if (filters?.dataInicio) {
+      // Cria a data no timezone local para evitar problemas de timezone
+      const dateStr = filters.dataInicio instanceof Date 
+        ? filters.dataInicio.toISOString().split('T')[0]
+        : String(filters.dataInicio).split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       
       // Se houver hora de início, aplica ela; senão, começa do início do dia
       if (filters.horaInicio) {
         const [hours, minutes] = filters.horaInicio.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
           startDate.setHours(hours, minutes, 0, 0);
-          const dateStr = filters.dataInicio 
-            ? (filters.dataInicio instanceof Date ? filters.dataInicio.toISOString().split('T')[0] : String(filters.dataInicio).split('T')[0])
-            : 'sem data';
           console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
         } else {
-          if (filters.dataInicio) {
-            startDate.setHours(0, 0, 0, 0);
-          }
-          console.log('⚠️ Hora inválida');
+          startDate.setHours(0, 0, 0, 0);
+          console.log('⚠️ Hora inválida, usando início do dia');
         }
       } else {
-        if (filters.dataInicio) {
-          startDate.setHours(0, 0, 0, 0);
-        }
+        startDate.setHours(0, 0, 0, 0);
       }
-      
-      if (filters.dataInicio || (filters.horaInicio && !isNaN(Number(filters.horaInicio.split(':')[0])))) {
-        query = query.gte('data_transacao', startDate.toISOString());
-      }
+      query = query.gte('data_transacao', startDate.toISOString());
+    } else if (filters?.horaInicio) {
+      // Se há apenas hora sem data, não aplica filtro (hora precisa de data)
+      console.warn('⚠️ Hora de início selecionada sem data. Selecione uma data para aplicar o filtro de hora.');
     }
 
     // Aplica filtro de data/hora fim
-    if (filters?.dataFim || filters?.horaFim) {
-      let endDate: Date;
-      
-      if (filters.dataFim) {
-        // Cria a data no timezone local para evitar problemas de timezone
-        const dateStr = filters.dataFim instanceof Date 
-          ? filters.dataFim.toISOString().split('T')[0]
-          : String(filters.dataFim).split('T')[0];
-        const [year, month, day] = dateStr.split('-').map(Number);
-        endDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
-      } else {
-        // Se não há data mas há hora, usa data máxima para filtrar apenas por hora
-        endDate = new Date('2099-12-31');
-      }
+    // IMPORTANTE: Hora só funciona se houver data selecionada
+    if (filters?.dataFim) {
+      // Cria a data no timezone local para evitar problemas de timezone
+      const dateStr = filters.dataFim instanceof Date 
+        ? filters.dataFim.toISOString().split('T')[0]
+        : String(filters.dataFim).split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       
       // Se houver hora de fim, aplica ela; senão, termina no fim do dia
       if (filters.horaFim) {
         const [hours, minutes] = filters.horaFim.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
           endDate.setHours(hours, minutes, 59, 999);
-          const dateStr = filters.dataFim 
-            ? (filters.dataFim instanceof Date ? filters.dataFim.toISOString().split('T')[0] : String(filters.dataFim).split('T')[0])
-            : 'sem data';
           console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
         } else {
-          if (filters.dataFim) {
-            endDate.setHours(23, 59, 59, 999);
-          }
-          console.log('⚠️ Hora inválida');
+          endDate.setHours(23, 59, 59, 999);
+          console.log('⚠️ Hora inválida, usando fim do dia');
         }
       } else {
-        if (filters.dataFim) {
-          endDate.setHours(23, 59, 59, 999);
-        }
+        endDate.setHours(23, 59, 59, 999);
       }
-      
-      if (filters.dataFim || (filters.horaFim && !isNaN(Number(filters.horaFim.split(':')[0])))) {
-        query = query.lte('data_transacao', endDate.toISOString());
-      }
+      query = query.lte('data_transacao', endDate.toISOString());
+    } else if (filters?.horaFim) {
+      // Se há apenas hora sem data, não aplica filtro (hora precisa de data)
+      console.warn('⚠️ Hora de fim selecionada sem data. Selecione uma data para aplicar o filtro de hora.');
     }
 
     if (filters?.adquirentes && filters.adquirentes.length > 0) {
