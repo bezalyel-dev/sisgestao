@@ -240,15 +240,22 @@ export async function getTransactions(
       console.log('🕐 Hora fim recebida (formato):', filters.horaFim, 'Tipo:', typeof filters.horaFim);
     }
 
+    // Verifica se as datas são iguais (para aplicar filtro de hora em um único dia)
+    const dataInicioStr = filters?.dataInicio 
+      ? (filters.dataInicio instanceof Date ? filters.dataInicio.toISOString().split('T')[0] : String(filters.dataInicio).split('T')[0])
+      : null;
+    const dataFimStr = filters?.dataFim 
+      ? (filters.dataFim instanceof Date ? filters.dataFim.toISOString().split('T')[0] : String(filters.dataFim).split('T')[0])
+      : null;
+    const datasIguais = dataInicioStr && dataFimStr && dataInicioStr === dataFimStr;
+
     // Aplica filtro de data/hora início
     // IMPORTANTE: Hora só funciona se houver data selecionada
     if (filters?.dataInicio) {
-      // Cria a data no timezone local para evitar problemas de timezone
       const dateStr = filters.dataInicio instanceof Date 
         ? filters.dataInicio.toISOString().split('T')[0]
         : String(filters.dataInicio).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
-      const startDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       
       // Se houver hora de início, aplica ela; senão, começa do início do dia
       if (filters.horaInicio) {
@@ -257,30 +264,43 @@ export async function getTransactions(
         if (!isNaN(hours) && !isNaN(minutes)) {
           // Garante que as horas estão no formato 24h (0-23)
           const hours24 = hours >= 0 && hours <= 23 ? hours : hours % 24;
-          startDate.setHours(hours24, minutes, 0, 0);
-          console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora recebida:', filters.horaInicio, 'Hora processada:', hours24 + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
+          
+          // Cria a data no timezone local
+          const localDate = new Date(year, month - 1, day, hours24, minutes, 0, 0);
+          
+          // Converte para UTC (Supabase armazena em UTC)
+          // getTimezoneOffset() retorna minutos (negativo para timezones à frente de UTC)
+          // Para UTC-3: offset = -180, então subtraímos para converter local -> UTC
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          
+          console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora:', hours24 + ':' + minutes, 'Local:', localDate.toLocaleString('pt-BR'), 'UTC:', utcDate.toISOString());
+          
+          query = query.gte('data_transacao', utcDate.toISOString());
         } else {
-          startDate.setHours(0, 0, 0, 0);
+          const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          query = query.gte('data_transacao', utcDate.toISOString());
           console.log('⚠️ Hora inválida:', filters.horaInicio, 'usando início do dia');
         }
       } else {
-        startDate.setHours(0, 0, 0, 0);
+        const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+        const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+        const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+        query = query.gte('data_transacao', utcDate.toISOString());
       }
-      query = query.gte('data_transacao', startDate.toISOString());
     } else if (filters?.horaInicio) {
-      // Se há apenas hora sem data, não aplica filtro (hora precisa de data)
       console.warn('⚠️ Hora de início selecionada sem data. Selecione uma data para aplicar o filtro de hora.');
     }
 
     // Aplica filtro de data/hora fim
     // IMPORTANTE: Hora só funciona se houver data selecionada
     if (filters?.dataFim) {
-      // Cria a data no timezone local para evitar problemas de timezone
       const dateStr = filters.dataFim instanceof Date 
         ? filters.dataFim.toISOString().split('T')[0]
         : String(filters.dataFim).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
-      const endDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       
       // Se houver hora de fim, aplica ela; senão, termina no fim do dia
       if (filters.horaFim) {
@@ -289,19 +309,39 @@ export async function getTransactions(
         if (!isNaN(hours) && !isNaN(minutes)) {
           // Garante que as horas estão no formato 24h (0-23)
           const hours24 = hours >= 0 && hours <= 23 ? hours : hours % 24;
-          endDate.setHours(hours24, minutes, 59, 999);
-          console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora recebida:', filters.horaFim, 'Hora processada:', hours24 + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
+          
+          // Cria a data no timezone local
+          const localDate = new Date(year, month - 1, day, hours24, minutes, 59, 999);
+          
+          // Converte para UTC
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          
+          console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora:', hours24 + ':' + minutes, 'Local:', localDate.toLocaleString('pt-BR'), 'UTC:', utcDate.toISOString());
+          
+          query = query.lte('data_transacao', utcDate.toISOString());
         } else {
-          endDate.setHours(23, 59, 59, 999);
+          const localDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          query = query.lte('data_transacao', utcDate.toISOString());
           console.log('⚠️ Hora inválida:', filters.horaFim, 'usando fim do dia');
         }
       } else {
-        endDate.setHours(23, 59, 59, 999);
+        const localDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+        const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+        const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+        query = query.lte('data_transacao', utcDate.toISOString());
       }
-      query = query.lte('data_transacao', endDate.toISOString());
     } else if (filters?.horaFim) {
-      // Se há apenas hora sem data, não aplica filtro (hora precisa de data)
       console.warn('⚠️ Hora de fim selecionada sem data. Selecione uma data para aplicar o filtro de hora.');
+    }
+
+    // Se as datas são iguais E há horas selecionadas, precisamos filtrar pela hora também
+    // Como o Supabase não permite filtrar diretamente pela parte da hora, vamos fazer isso após buscar
+    // Mas primeiro, vamos ajustar o filtro de data fim para não incluir horas fora do range
+    if (datasIguais && filters?.horaInicio && filters?.horaFim) {
+      console.log('📌 Datas iguais detectadas - o filtro de hora será aplicado após buscar os dados');
     }
 
     if (filters?.adquirentes && filters.adquirentes.length > 0) {
@@ -315,19 +355,78 @@ export async function getTransactions(
     // Ordena por data de transação (mais recente primeiro)
     query = query.order('data_transacao', { ascending: false });
 
-    // Paginação
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    const { data, error, count } = await query;
+    // Se há filtro de hora, precisamos buscar mais dados para filtrar depois
+    // Caso contrário, aplica paginação normalmente
+    const hasHourFilter = (filters?.horaInicio || filters?.horaFim) && (filters?.dataInicio || filters?.dataFim);
+    
+    let data, error, count;
+    
+    if (hasHourFilter) {
+      // Busca mais dados (até 1000) para poder filtrar pela hora depois
+      query = query.range(0, 999);
+      const result = await query;
+      data = result.data;
+      error = result.error;
+      count = result.count;
+    } else {
+      // Paginação normal
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+      const result = await query;
+      data = result.data;
+      error = result.error;
+      count = result.count;
+    }
 
     if (error) {
       return { data: [], count: 0, error: error as Error };
     }
 
-    const transactions = data?.map(rowToTransaction) || [];
-    return { data: transactions, count: count || 0, error: null };
+    let transactions = data?.map(rowToTransaction) || [];
+    
+    // Se há horas selecionadas, filtra pela hora também (já que o Supabase não permite filtrar diretamente pela parte da hora)
+    if (hasHourFilter) {
+      const [hoursInicio, minutesInicio] = filters.horaInicio 
+        ? filters.horaInicio.split(':').map(Number) 
+        : [0, 0];
+      const [hoursFim, minutesFim] = filters.horaFim 
+        ? filters.horaFim.split(':').map(Number) 
+        : [23, 59];
+      
+      if (!isNaN(hoursInicio) && !isNaN(minutesInicio) && !isNaN(hoursFim) && !isNaN(minutesFim)) {
+        const horaInicioMinutos = hoursInicio * 60 + minutesInicio;
+        const horaFimMinutos = hoursFim * 60 + minutesFim;
+        
+        const totalAntes = transactions.length;
+        transactions = transactions.filter((transaction) => {
+          const transDate = transaction.data_transacao instanceof Date 
+            ? transaction.data_transacao 
+            : new Date(transaction.data_transacao);
+          
+          // Obtém a hora local da transação
+          const transHora = transDate.getHours();
+          const transMinuto = transDate.getMinutes();
+          const transHoraMinutos = transHora * 60 + transMinuto;
+          
+          // Verifica se a hora da transação está dentro do range
+          const dentroDoRange = transHoraMinutos >= horaInicioMinutos && transHoraMinutos <= horaFimMinutos;
+          
+          return dentroDoRange;
+        });
+        
+        const totalFiltrado = transactions.length;
+        console.log(`🔍 Filtro de hora aplicado: ${filters.horaInicio || '00:00'} até ${filters.horaFim || '23:59'}. Transações: ${totalAntes} -> ${totalFiltrado}`);
+        
+        // Aplica paginação após filtrar pela hora
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize;
+        transactions = transactions.slice(from, to);
+        count = totalFiltrado; // Count é o total filtrado, não apenas a página atual
+      }
+    }
+    
+    return { data: transactions, count: count || transactions.length, error: null };
   } catch (error) {
     return { data: [], count: 0, error: error as Error };
   }
@@ -498,8 +597,73 @@ export async function getTransactionSummary(
       return { data: null, error: error as Error };
     }
 
-    const transactions = data || [];
-    const totalTransacoes = count || 0;
+    let transactions = data || [];
+    
+    // Se há horas selecionadas, filtra pela hora também
+    if ((filters?.horaInicio || filters?.horaFim) && (filters?.dataInicio || filters?.dataFim)) {
+      const [hoursInicio, minutesInicio] = filters.horaInicio 
+        ? filters.horaInicio.split(':').map(Number) 
+        : [0, 0];
+      const [hoursFim, minutesFim] = filters.horaFim 
+        ? filters.horaFim.split(':').map(Number) 
+        : [23, 59];
+      
+      if (!isNaN(hoursInicio) && !isNaN(minutesInicio) && !isNaN(hoursFim) && !isNaN(minutesFim)) {
+        const horaInicioMinutos = hoursInicio * 60 + minutesInicio;
+        const horaFimMinutos = hoursFim * 60 + minutesFim;
+        
+        // Busca todas as transações para calcular o resumo corretamente
+        const allTransactionsQuery = supabase
+          .from('transactions')
+          .select('data_transacao, valor_bruto, valor_liquido');
+        
+        // Aplica os mesmos filtros de data (sem hora)
+        if (filters?.dataInicio) {
+          const dateStr = filters.dataInicio instanceof Date 
+            ? filters.dataInicio.toISOString().split('T')[0]
+            : String(filters.dataInicio).split('T')[0];
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          allTransactionsQuery.gte('data_transacao', utcDate.toISOString());
+        }
+        
+        if (filters?.dataFim) {
+          const dateStr = filters.dataFim instanceof Date 
+            ? filters.dataFim.toISOString().split('T')[0]
+            : String(filters.dataFim).split('T')[0];
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const localDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+          const timezoneOffsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+          const utcDate = new Date(localDate.getTime() - timezoneOffsetMs);
+          allTransactionsQuery.lte('data_transacao', utcDate.toISOString());
+        }
+        
+        if (filters?.adquirentes && filters.adquirentes.length > 0) {
+          allTransactionsQuery.in('adquirente', filters.adquirentes);
+        }
+        
+        if (filters?.modalidades && filters.modalidades.length > 0) {
+          allTransactionsQuery.in('modalidade', filters.modalidades);
+        }
+        
+        const { data: allData } = await allTransactionsQuery;
+        
+        // Filtra pela hora
+        const filteredTransactions = (allData || []).filter((t: any) => {
+          const transDate = new Date(t.data_transacao);
+          const transHora = transDate.getHours();
+          const transMinuto = transDate.getMinutes();
+          const transHoraMinutos = transHora * 60 + transMinuto;
+          return transHoraMinutos >= horaInicioMinutos && transHoraMinutos <= horaFimMinutos;
+        });
+        
+        transactions = filteredTransactions;
+      }
+    }
+    
+    const totalTransacoes = transactions.length;
     const valorBrutoTotal = transactions.reduce((sum: number, t: any) => sum + (Number(t.valor_bruto) || 0), 0);
     const valorLiquidoTotal = transactions.reduce((sum: number, t: any) => sum + (Number(t.valor_liquido) || 0), 0);
 
