@@ -231,6 +231,14 @@ export async function getTransactions(
       dataFim: filters?.dataFim,
       horaFim: filters?.horaFim
     });
+    
+    // Log para debug: mostra o formato exato da hora recebida
+    if (filters?.horaInicio) {
+      console.log('🕐 Hora início recebida (formato):', filters.horaInicio, 'Tipo:', typeof filters.horaInicio);
+    }
+    if (filters?.horaFim) {
+      console.log('🕐 Hora fim recebida (formato):', filters.horaFim, 'Tipo:', typeof filters.horaFim);
+    }
 
     // Aplica filtro de data/hora início
     // IMPORTANTE: Hora só funciona se houver data selecionada
@@ -244,13 +252,16 @@ export async function getTransactions(
       
       // Se houver hora de início, aplica ela; senão, começa do início do dia
       if (filters.horaInicio) {
+        // O input type="time" sempre retorna em formato 24h (HH:mm)
         const [hours, minutes] = filters.horaInicio.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
-          startDate.setHours(hours, minutes, 0, 0);
-          console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
+          // Garante que as horas estão no formato 24h (0-23)
+          const hours24 = hours >= 0 && hours <= 23 ? hours : hours % 24;
+          startDate.setHours(hours24, minutes, 0, 0);
+          console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora recebida:', filters.horaInicio, 'Hora processada:', hours24 + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
         } else {
           startDate.setHours(0, 0, 0, 0);
-          console.log('⚠️ Hora inválida, usando início do dia');
+          console.log('⚠️ Hora inválida:', filters.horaInicio, 'usando início do dia');
         }
       } else {
         startDate.setHours(0, 0, 0, 0);
@@ -273,13 +284,16 @@ export async function getTransactions(
       
       // Se houver hora de fim, aplica ela; senão, termina no fim do dia
       if (filters.horaFim) {
+        // O input type="time" sempre retorna em formato 24h (HH:mm)
         const [hours, minutes] = filters.horaFim.split(':').map(Number);
         if (!isNaN(hours) && !isNaN(minutes)) {
-          endDate.setHours(hours, minutes, 59, 999);
-          console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
+          // Garante que as horas estão no formato 24h (0-23)
+          const hours24 = hours >= 0 && hours <= 23 ? hours : hours % 24;
+          endDate.setHours(hours24, minutes, 59, 999);
+          console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora recebida:', filters.horaFim, 'Hora processada:', hours24 + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
         } else {
           endDate.setHours(23, 59, 59, 999);
-          console.log('⚠️ Hora inválida, usando fim do dia');
+          console.log('⚠️ Hora inválida:', filters.horaFim, 'usando fim do dia');
         }
       } else {
         endDate.setHours(23, 59, 59, 999);
