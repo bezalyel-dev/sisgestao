@@ -591,7 +591,7 @@ export async function getTransactionSummary(
       query = query.in('modalidade', filters.modalidades);
     }
 
-    const { data, error, count } = await query;
+    const { data, error } = await query;
 
     if (error) {
       return { data: null, error: error as Error };
