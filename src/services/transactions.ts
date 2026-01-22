@@ -240,7 +240,7 @@ export async function getTransactions(
         // Cria a data no timezone local para evitar problemas de timezone
         const dateStr = filters.dataInicio instanceof Date 
           ? filters.dataInicio.toISOString().split('T')[0]
-          : filters.dataInicio.toString().split('T')[0];
+          : String(filters.dataInicio).split('T')[0];
         const [year, month, day] = dateStr.split('-').map(Number);
         startDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       } else {
@@ -254,7 +254,7 @@ export async function getTransactions(
         if (!isNaN(hours) && !isNaN(minutes)) {
           startDate.setHours(hours, minutes, 0, 0);
           const dateStr = filters.dataInicio 
-            ? (filters.dataInicio instanceof Date ? filters.dataInicio.toISOString().split('T')[0] : filters.dataInicio.toString().split('T')[0])
+            ? (filters.dataInicio instanceof Date ? filters.dataInicio.toISOString().split('T')[0] : String(filters.dataInicio).split('T')[0])
             : 'sem data';
           console.log('✅ Aplicando filtro INÍCIO - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', startDate.toISOString(), 'Local:', startDate.toLocaleString('pt-BR'));
         } else {
@@ -282,7 +282,7 @@ export async function getTransactions(
         // Cria a data no timezone local para evitar problemas de timezone
         const dateStr = filters.dataFim instanceof Date 
           ? filters.dataFim.toISOString().split('T')[0]
-          : filters.dataFim.toString().split('T')[0];
+          : String(filters.dataFim).split('T')[0];
         const [year, month, day] = dateStr.split('-').map(Number);
         endDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
       } else {
@@ -296,7 +296,7 @@ export async function getTransactions(
         if (!isNaN(hours) && !isNaN(minutes)) {
           endDate.setHours(hours, minutes, 59, 999);
           const dateStr = filters.dataFim 
-            ? (filters.dataFim instanceof Date ? filters.dataFim.toISOString().split('T')[0] : filters.dataFim.toString().split('T')[0])
+            ? (filters.dataFim instanceof Date ? filters.dataFim.toISOString().split('T')[0] : String(filters.dataFim).split('T')[0])
             : 'sem data';
           console.log('✅ Aplicando filtro FIM - Data:', dateStr, 'Hora:', hours + ':' + minutes, 'ISO:', endDate.toISOString(), 'Local:', endDate.toLocaleString('pt-BR'));
         } else {
@@ -384,7 +384,7 @@ export async function getAllTransactions(
     if (filters?.dataInicio) {
       const dateStr = filters.dataInicio instanceof Date 
         ? filters.dataInicio.toISOString().split('T')[0]
-        : filters.dataInicio.toString().split('T')[0];
+        : String(filters.dataInicio).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const startDate = new Date(year, month - 1, day);
       
@@ -404,7 +404,7 @@ export async function getAllTransactions(
     if (filters?.dataFim) {
       const dateStr = filters.dataFim instanceof Date 
         ? filters.dataFim.toISOString().split('T')[0]
-        : filters.dataFim.toString().split('T')[0];
+        : String(filters.dataFim).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const endDate = new Date(year, month - 1, day);
       
@@ -459,7 +459,7 @@ export async function getTransactionSummary(
     if (filters?.dataInicio) {
       const dateStr = filters.dataInicio instanceof Date 
         ? filters.dataInicio.toISOString().split('T')[0]
-        : filters.dataInicio.toString().split('T')[0];
+        : String(filters.dataInicio).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const startDate = new Date(year, month - 1, day);
       
@@ -479,7 +479,7 @@ export async function getTransactionSummary(
     if (filters?.dataFim) {
       const dateStr = filters.dataFim instanceof Date 
         ? filters.dataFim.toISOString().split('T')[0]
-        : filters.dataFim.toString().split('T')[0];
+        : String(filters.dataFim).split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const endDate = new Date(year, month - 1, day);
       
